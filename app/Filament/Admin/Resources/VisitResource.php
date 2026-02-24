@@ -46,36 +46,108 @@ class VisitResource extends Resource
     {
         return $form
             ->schema([
-                //
+                Forms\Components\Section::make('Visitor Information')
+                    ->schema([
+                        Forms\Components\TextInput::make('visitor_phone')
+                            ->label('Phone')
+                            ->placeholder('Enter phone number')
+                            ->tel()
+                            ->required()
+                            ->maxLength(255)
+                            ->live(onBlur: true)
+                            ->afterStateUpdated(function ($state, callable $set) {
+                                if ($state) {
+                                    $visitor = \App\Models\Visitor::where('phone', $state)->first();
+                                    if ($visitor) {
+                                        $set('visitor_name', $visitor->name);
+                                        $set('visitor_email', $visitor->email);
+                                        $set('visitor_company', $visitor->company);
+                                    }
+                                }
+                            }),
+                        Forms\Components\TextInput::make('visitor_name')
+                            ->label('Name')
+                            ->placeholder('Visitor name')
+                            ->required()
+                            ->maxLength(255),
+                        Forms\Components\TextInput::make('visitor_email')
+                            ->label('Email')
+                            ->placeholder('visitor@email.com')
+                            ->email()
+                            ->maxLength(255),
+                        Forms\Components\TextInput::make('visitor_company')
+                            ->label('Company')
+                            ->placeholder('Company name')
+                            ->maxLength(255),
+                    ])->columns(2),
+                Forms\Components\Section::make('Visit Details')
+                    ->schema([
+                        Forms\Components\Select::make('employee_id')
+                            ->label('Host')
+                            ->relationship('employee', 'first_name')
+                            ->getOptionLabelFromRecordUsing(fn ($record) => $record->full_name)
+                            ->searchable(['first_name', 'last_name'])
+                            ->required()
+                            ->preload(),
+                        Forms\Components\ViewField::make('photo')
+                            ->label('Photo')
+                            ->view('forms.components.camera-field'),
+                        Forms\Components\Textarea::make('purpose')
+                            ->label('Purpose')
+                            ->rows(3)
+                            ->columnSpanFull(),
+                    ]),
             ]);
     }
 
     public static function table(Table $table): Table
     {
         return $table
+            ->modifyQueryUsing(fn (Builder $query) => $query->with('visitor', 'employee'))
             ->columns([
-                Tables\Columns\TextColumn::make('visitor')
+                Tables\Columns\TextColumn::make('visitor.name')
                     ->label(__('Visitor'))
+                    ->default('-')
                     ->searchable(),
+                Tables\Columns\TextColumn::make('visitor.phone')
+                    ->label(__('Phone'))
+                    ->default('-')
+                    ->searchable(),
+                Tables\Columns\TextColumn::make('visitor.company')
+                    ->label(__('Company'))
+                    ->default('-')
+                    ->searchable(),
+                Tables\Columns\ImageColumn::make('photo')
+                    ->label(__('Photo'))
+                    ->circular()
+                    ->defaultImageUrl('https://ui-avatars.com/api/?name=V&color=7F9CF5&background=EBF4FF'),
+                Tables\Columns\BadgeColumn::make('status')
+                    ->label(__('Status'))
+                    ->colors([
+                        'warning' => 'scheduled',
+                        'success' => 'completed',
+                        'gray' => fn ($state) => $state === null,
+                    ])
+                    ->formatStateUsing(fn ($state) => $state ?? 'walk-in'),
                 Tables\Columns\TextColumn::make('employee.full_name')
                     ->label(__('Host'))
                     ->searchable(),
                 Tables\Columns\TextColumn::make('date')
                     ->label('Date')
                     ->state(function (Model $record) {
-                        return Carbon::createFromFormat('Y-m-d H:i:s', $record->arrival)->format('Y-m-d');
+                        return $record->arrival ? Carbon::parse($record->arrival)->format('Y-m-d') : '-';
                     })
                     ->sortable(),
                 Tables\Columns\TextColumn::make('arrival')
                     ->label('Arrival')
                     ->formatStateUsing(function (Model $record) {
-                        return Carbon::createFromFormat('Y-m-d H:i:s', $record->arrival)->format('H:i:sa');
+                        return $record->arrival ? Carbon::parse($record->arrival)->format('H:i:sa') : '-';
                     })
                     ->sortable(),
                 Tables\Columns\TextColumn::make('departure')
                     ->label('Departure')
                     ->formatStateUsing(function (Model $record) {
-                        return Carbon::createFromFormat('Y-m-d H:i:s', $record->departure)->format('H:i:sa');
+                        return $record->departure ? Carbon::parse($record->departure)->format('H:i:sa') : '-';
                     }),
             ])
             ->defaultSort('created_at', 'desc')
@@ -120,12 +192,22 @@ class VisitResource extends Resource
     {
         return $infolist
             ->schema([
-                TextEntry::make('visitor_email')
+                TextEntry::make('visitor.name')
+                    ->label('Visitor Name'),
+                TextEntry::make('visitor.email')
                     ->label('Email'),
-                TextEntry::make('visitor_phone')
+                TextEntry::make('visitor.phone')
                     ->label('Phone Number'),
+                TextEntry::make('visitor.company')
+                    ->label('Company'),
+                TextEntry::make('photo')
+                    ->label('Photo')
+                    ->formatStateUsing(fn ($state) => $state ? asset('storage/' . $state) : '-'),
                 TextEntry::make('purpose')
                     ->label('Purpose for Visit'),
+                TextEntry::make('status')
+                    ->label('Type')
+                    ->formatStateUsing(fn ($state) => $state ? ucfirst($state) : 'Walk-in'),
                 TextEntry::make('created_at')
                     ->dateTime(),
             ])

@@ -52,29 +52,37 @@ class VisitResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->modifyQueryUsing(fn (Builder $query) => $query->with('visitor', 'employee'))
             ->columns([
-                Tables\Columns\TextColumn::make('visitor')
+                Tables\Columns\TextColumn::make('visitor.name')
                     ->label(__('Visitor'))
                     ->searchable(),
+                Tables\Columns\TextColumn::make('visitor.phone')
+                    ->label(__('Phone'))
+                    ->searchable(),
+                Tables\Columns\ImageColumn::make('photo')
+                    ->label(__('Photo'))
+                    ->circular()
+                    ->defaultImageUrl('https://ui-avatars.com/api/?name=V&color=7F9CF5&background=EBF4FF'),
                 Tables\Columns\TextColumn::make('employee.full_name')
                     ->label(__('Host'))
                     ->searchable(),
                 Tables\Columns\TextColumn::make('date')
                     ->label('Date')
                     ->state(function (Model $record) {
-                        return Carbon::createFromFormat('Y-m-d H:i:s', $record->arrival)->format('Y-m-d');
+                        return $record->arrival ? Carbon::parse($record->arrival)->format('Y-m-d') : '-';
                     })
                     ->sortable(),
                 Tables\Columns\TextColumn::make('arrival')
                     ->label('Arrival')
                     ->formatStateUsing(function (Model $record) {
-                        return Carbon::createFromFormat('Y-m-d H:i:s', $record->arrival)->format('H:i:sa');
+                        return $record->arrival ? Carbon::parse($record->arrival)->format('H:i:sa') : '-';
                     })
                     ->sortable(),
                 Tables\Columns\TextColumn::make('departure')
                     ->label('Departure')
                     ->formatStateUsing(function (Model $record) {
-                        return Carbon::createFromFormat('Y-m-d H:i:s', $record->departure)->format('H:i:sa');
+                        return $record->departure ? Carbon::parse($record->departure)->format('H:i:sa') : '-';
                     }),
             ])
             ->defaultSort('created_at', 'desc')
@@ -125,10 +133,17 @@ class VisitResource extends Resource
     {
         return $infolist
             ->schema([
-                TextEntry::make('visitor_email')
+                TextEntry::make('visitor.name')
+                    ->label('Visitor Name'),
+                TextEntry::make('visitor.email')
                     ->label('Email'),
-                TextEntry::make('visitor_phone')
+                TextEntry::make('visitor.phone')
                     ->label('Phone Number'),
+                TextEntry::make('visitor.company')
+                    ->label('Company'),
+                TextEntry::make('photo')
+                    ->label('Photo')
+                    ->formatStateUsing(fn ($state) => $state ? asset('storage/' . $state) : '-'),
                 TextEntry::make('purpose')
                     ->label('Purpose for Visit'),
                 TextEntry::make('created_at')

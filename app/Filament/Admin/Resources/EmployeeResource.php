@@ -46,10 +46,13 @@ class EmployeeResource extends Resource
             ->schema([
                 Forms\Components\Section::make()
                     ->schema([
-                        Forms\Components\TextInput::make('email')
-                            ->label(__('Email'))
-                            ->placeholder(__('Email Address'))
-                            ->required(),
+                        Forms\Components\Select::make('user_id')
+                            ->label(__('Assign User Login'))
+                            ->relationship('user', 'email')
+                            ->searchable()
+                            ->preload()
+                            ->required()
+                            ->helperText(__('Select user account for this employee')),
                         Forms\Components\TextInput::make('first_name')
                             ->label(__('First Name'))
                             ->placeholder(__('First Name'))
@@ -86,12 +89,12 @@ class EmployeeResource extends Resource
                             }),
                         Forms\Components\Select::make('designation_id')
                             ->label(__('Designation'))
-                            ->relationship('designation', fn () => "name")
                             ->options(fn (Forms\Get $get): Collection => Designation::query()
-                                ->where('department_id', $get('department_id'))
+                                ->when($get('department_id'), fn ($query, $deptId) => $query->where('department_id', $deptId))
                                 ->pluck('name', 'id'))
                             ->searchable()
                             ->preload()
+                            ->live()
                             ->createOptionForm([
                                 Forms\Components\TextInput::make('name')
                                     ->label(strval(__('Designation Name')))
@@ -127,11 +130,9 @@ class EmployeeResource extends Resource
                     ->label(__('Department Name')),
                 Tables\Columns\TextColumn::make('designation.name')
                     ->label(__('Designation Name')),
-                Tables\Columns\TextColumn::make('visits')
+                Tables\Columns\TextColumn::make('visits_count')
                     ->label(__('No of Visits'))
-                    ->state(function (Model $record) {
-                        return $record->visits->count();
-                    })
+                    ->counts('visits')
                     ->sortable(),
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Created at')

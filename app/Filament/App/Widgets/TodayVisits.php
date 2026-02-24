@@ -26,10 +26,10 @@ class TodayVisits extends BaseWidget
     public function table(Table $table): Table
     {
         return $table
-        ->query(Visit::query()->whereDate('created_at', Carbon::today()))
+        ->query(Visit::query()->with('visitor', 'employee')->whereDate('created_at', Carbon::today()))
         ->defaultSort('created_at', 'desc')
         ->columns([
-            Tables\Columns\TextColumn::make('visitor')
+            Tables\Columns\TextColumn::make('visitor.name')
                 ->label(__('Visitor')),
             Tables\Columns\TextColumn::make('employee.full_name')
                 ->label(__('Host'))
@@ -37,12 +37,12 @@ class TodayVisits extends BaseWidget
             Tables\Columns\TextColumn::make('arrival')
                 ->label('Arrival')
                 ->formatStateUsing(function (Model $record) {
-                    return Carbon::createFromFormat('Y-m-d H:i:s', $record->arrival)->format('H:i:sa');
+                    return $record->arrival ? Carbon::parse($record->arrival)->format('H:i:sa') : '-';
                 }),
             Tables\Columns\TextColumn::make('departure')
                 ->label('Departure')
                 ->formatStateUsing(function (Model $record) {
-                    return Carbon::createFromFormat('Y-m-d H:i:s', $record->departure)->format('H:i:sa');
+                    return $record->departure ? Carbon::parse($record->departure)->format('H:i:sa') : '-';
                 }),
         ])
         ->paginated(false)
@@ -58,37 +58,87 @@ class TodayVisits extends BaseWidget
         ->headerActions([
             CreateAction::make()
                 ->form([
-                    Forms\Components\Grid::make(2)
+                    Forms\Components\Section::make('Visitor Information')
                         ->schema([
-                            Forms\Components\TextInput::make('visitor')
-                            ->label('Visitor')
-                            ->placeholder('Visitor')
-                            ->required(),
-                        Forms\Components\TextInput::make('visitor_phone')
-                            ->label('Visitor Phone')
-                            ->placeholder('Visitor Phone'),
-                        Forms\Components\TextInput::make('visitor_email')
-                            ->label('Visitor Email')
-                            ->placeholder('Visitor Email'),
-                        Forms\Components\Select::make('employee_id')
-                            ->label('Host')
-                            ->placeholder('Select Host')
-                            ->relationship(
-                                name: 'employee',
-                                modifyQueryUsing: fn (Builder $query) => $query->orderBy('first_name')->orderBy('last_name'),
-                            )
-                            ->getOptionLabelFromRecordUsing(fn (Model $record) => "{$record->first_name} {$record->last_name} - {$record->designation->name}, {$record->department->name}")
-                            ->searchable(['first_name', 'last_name'])
-                            ->preload()
-                            ->loadingMessage('Loading employees...'),
-                        Forms\Components\Textarea::make('purpose')
-                            ->label('Purpose')
-                            ->placeholder('Purpose')
-                            ->columnspan('full')
-                        ])
-                    ])
+                            Forms\Components\TextInput::make('visitor_phone')
+                                ->label('Phone')
+                                ->placeholder('Enter phone number')
+                                ->tel()
+                                ->required()
+                                ->maxLength(255)
+                                ->live(onBlur: true)
+                                ->afterStateUpdated(function ($state, callable $set) {
+                                    if ($state) {
+                                        $visitor = \App\Models\Visitor::where('phone', $state)->first();
+                                        if ($visitor) {
+                                            $set('visitor_name', $visitor->name);
+                                            $set('visitor_email', $visitor->email);
+                                            $set('visitor_company', $visitor->company);
+                                        }
+                                    }
+                                }),
+                            Forms\Components\TextInput::make('visitor_name')
+                                ->label('Name')
+                                ->placeholder('Visitor name')
+                                ->required()
+                                ->maxLength(255),
+                            Forms\Components\TextInput::make('visitor_email')
+                                ->label('Email')
+                                ->placeholder('visitor@email.com')
+                                ->email()
+                                ->maxLength(255),
+                            Forms\Components\TextInput::make('visitor_company')
+                                ->label('Company')
+                                ->placeholder('Company name')
+                                ->maxLength(255),
+                        ])->columns(2),
+                    Forms\Components\Section::make('Visit Details')
+                        ->schema([
+                            Forms\Components\Select::make('employee_id')
+                                ->label('Host')
+                                ->relationship('employee', 'first_name')
+                                ->getOptionLabelFromRecordUsing(fn ($record) => $record->full_name)
+                                ->searchable(['first_name', 'last_name'])
+                                ->required()
+                                ->preload(),
+                            Forms\Components\ViewField::make('photo')
+                                ->label('Photo')
+                                ->view('forms.components.camera-field'),
+                            Forms\Components\Textarea::make('purpose')
+                                ->label('Purpose')
+                                ->rows(3)
+                                ->columnSpanFull(),
+                        ]),
+                ])
                 ->mutateFormDataUsing(function (array $data): array {
+                    $visitor = \App\Models\Visitor::updateOrCreate(
+                        ['phone' => $data['visitor_phone']],
+                        [
+                            'name' => $data['visitor_name'],
+                            'email' => $data['visitor_email'] ?? null,
+                            'company' => $data['visitor_company'] ?? null,
+                        ]
+                    );
+                    
+                    unset($data['visitor_phone'], $data['visitor_name'], $data['visitor_email'], $data['visitor_company']);
+                    
+                    // Save photo from base64
+                    if (!empty($data['photo']) && str_starts_with($data['photo'], 'data:image')) {
+                        $image = $data['photo'];
+                        $image = str_replace('data:image/jpeg;base64,', '', $image);
+                        $image = str_replace(' ', '+', $image);
+                        $imageName = 'visits/' . uniqid() . '.jpg';
+                        \Storage::disk('public')->put($imageName, base64_decode($image));
+                        $data['photo'] = $imageName;
+                    } else {
+                        unset($data['photo']);
+                    }
+                    
+                    $data['visitor_id'] = $visitor->id;
+                    $data['uuid'] = \Illuminate\Support\Str::uuid();
+                    $data['status'] = 'checked_in';
                     $data['arrival'] = now();
+                    
                     return $data;
                 })
                 ->successNotification(

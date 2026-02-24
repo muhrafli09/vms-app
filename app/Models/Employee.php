@@ -20,7 +20,8 @@ class Employee extends Model
         'first_name',
         'last_name',
         'department_id',
-        'designation_id', 
+        'designation_id',
+        'user_id',
     ];
 
     protected $appends = ['full_name'];
@@ -46,6 +47,11 @@ class Employee extends Model
     public function department()
     {
         return $this->belongsTo(Department::class);
+    }
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
     }
 
     public function visits()
