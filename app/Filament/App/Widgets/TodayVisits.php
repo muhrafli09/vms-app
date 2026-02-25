@@ -19,6 +19,8 @@ use Illuminate\Database\Eloquent\{
 };
 use Filament\Notifications\Notification;
 use Filament\Widgets\TableWidget as BaseWidget;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\HostVisitorCheckinMail;
 
 class TodayVisits extends BaseWidget
 {
@@ -153,7 +155,19 @@ class TodayVisits extends BaseWidget
                          ->success()
                          ->title('Visitor Registered')
                          ->body('You have successfully created a new visitor'),
-                 ),
+                 )
+                 ->after(function ($record) {
+                     // Send email notification to host
+                     $record->load('visitor', 'employee.user');
+                     
+                     if ($record->employee->user && $record->employee->user->email) {
+                         try {
+                             Mail::to($record->employee->user->email)->send(new HostVisitorCheckinMail($record));
+                         } catch (\Exception $e) {
+                             \Log::error('Failed to send host notification: ' . $e->getMessage());
+                         }
+                     }
+                 }),
         ]);
     }
 }

@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\{Kiosk, Employee, Visitor, Visit};
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\HostVisitorCheckinMail;
 
 class KioskController extends Controller
 {
@@ -131,7 +133,7 @@ class KioskController extends Controller
             }
         }
         
-        Visit::create([
+        $visit = Visit::create([
             'visitor_id' => $visitor->id,
             'employee_id' => $validated['employee_id'],
             'purpose' => $validated['purpose'] ?? null,
@@ -140,6 +142,9 @@ class KioskController extends Controller
             'uuid' => \Illuminate\Support\Str::uuid(),
             'status' => 'checked_in',
         ]);
+        
+        // Send email notification to host
+        $this->sendHostNotification($visit);
         
         return redirect()->route('kiosk.index', $token)->with('success', 'Check-in successful!');
     }
@@ -181,6 +186,9 @@ class KioskController extends Controller
             'photo' => $photoPath,
         ]);
         
+        // Send email notification to host
+        $this->sendHostNotification($visit);
+        
         return response()->json([
             'success' => true,
             'visitor' => $visit->visitor,
@@ -211,5 +219,20 @@ class KioskController extends Controller
         \Storage::disk('public')->put($path . '/' . $filename, $image);
         
         return $path . '/' . $filename;
+    }
+    
+    private function sendHostNotification(Visit $visit)
+    {
+        // Load relationships
+        $visit->load('visitor', 'employee.user');
+        
+        // Send email to host if employee has user with email
+        if ($visit->employee->user && $visit->employee->user->email) {
+            try {
+                Mail::to($visit->employee->user->email)->send(new HostVisitorCheckinMail($visit));
+            } catch (\Exception $e) {
+                \Log::error('Failed to send host notification email: ' . $e->getMessage());
+            }
+        }
     }
 }

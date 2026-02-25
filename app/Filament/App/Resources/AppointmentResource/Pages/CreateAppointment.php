@@ -6,6 +6,9 @@ use App\Filament\App\Resources\AppointmentResource;
 use Filament\Resources\Pages\CreateRecord;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\VisitorAppointmentMail;
+use App\Services\QrCodeService;
 
 class CreateAppointment extends CreateRecord
 {
@@ -32,6 +35,40 @@ class CreateAppointment extends CreateRecord
         $data['created_by'] = Auth::id();
         
         return $data;
+    }
+    
+    protected function afterCreate(): void
+    {
+        $visit = $this->record;
+        
+        // Generate QR Code
+        $qrCodeService = new QrCodeService();
+        $qrCodeService->generate($visit->uuid);
+        
+        // Send email to visitor if email exists
+        if ($visit->visitor->email) {
+            try {
+                Mail::to($visit->visitor->email)->send(new VisitorAppointmentMail($visit));
+                
+                \Filament\Notifications\Notification::make()
+                    ->success()
+                    ->title('Appointment Created')
+                    ->body('Email with QR code has been sent to ' . $visit->visitor->email)
+                    ->send();
+            } catch (\Exception $e) {
+                \Filament\Notifications\Notification::make()
+                    ->warning()
+                    ->title('Appointment Created')
+                    ->body('Appointment created but failed to send email: ' . $e->getMessage())
+                    ->send();
+            }
+        } else {
+            \Filament\Notifications\Notification::make()
+                ->success()
+                ->title('Appointment Created')
+                ->body('Appointment created. No email sent (visitor has no email address).')
+                ->send();
+        }
     }
     
     protected function getRedirectUrl(): string

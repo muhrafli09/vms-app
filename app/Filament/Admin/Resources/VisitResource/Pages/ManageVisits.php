@@ -5,6 +5,8 @@ namespace App\Filament\Admin\Resources\VisitResource\Pages;
 use App\Filament\Admin\Resources\VisitResource;
 use Filament\Actions;
 use Filament\Resources\Pages\ManageRecords;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\HostVisitorCheckinMail;
 
 class ManageVisits extends ManageRecords
 {
@@ -46,6 +48,18 @@ class ManageVisits extends ManageRecords
                     $data['arrival'] = now();
                     
                     return $data;
+                })
+                ->after(function ($record) {
+                    // Send email notification to host
+                    $record->load('visitor', 'employee.user');
+                    
+                    if ($record->employee->user && $record->employee->user->email) {
+                        try {
+                            Mail::to($record->employee->user->email)->send(new HostVisitorCheckinMail($record));
+                        } catch (\Exception $e) {
+                            \Log::error('Failed to send host notification: ' . $e->getMessage());
+                        }
+                    }
                 }),
         ];
     }
