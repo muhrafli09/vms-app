@@ -56,6 +56,14 @@ class Register extends BaseRegister
         $data = $this->form->getState();
 
         $user = $this->getUserModel()::create($data);
+        
+        // Auto-create employee record for new user
+        \App\Models\Employee::create([
+            'user_id' => $user->id,
+            'email' => $user->email,
+            'first_name' => explode(' ', $user->name)[0],
+            'last_name' => implode(' ', array_slice(explode(' ', $user->name), 1)) ?: null,
+        ]);
 
         $this->invitation->delete();
 
