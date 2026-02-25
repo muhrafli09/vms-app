@@ -21,6 +21,7 @@ use Filament\{
     Tables\Actions\CreateAction,
     Infolists\Components\IconEntry,
     Infolists\Components\TextEntry,
+    Infolists\Components\ImageEntry,
 };
 
 use Illuminate\{
@@ -193,18 +194,24 @@ class VisitResource extends Resource
         return $infolist
             ->schema([
                 TextEntry::make('visitor.name')
-                    ->label('Visitor Name'),
+                    ->label('Visitor Name')
+                    ->default('-'),
                 TextEntry::make('visitor.email')
-                    ->label('Email'),
+                    ->label('Email')
+                    ->default('-'),
                 TextEntry::make('visitor.phone')
-                    ->label('Phone Number'),
+                    ->label('Phone Number')
+                    ->default('-'),
                 TextEntry::make('visitor.company')
-                    ->label('Company'),
-                TextEntry::make('photo')
+                    ->label('Company')
+                    ->default('-'),
+                ImageEntry::make('photo')
                     ->label('Photo')
-                    ->formatStateUsing(fn ($state) => $state ? asset('storage/' . $state) : '-'),
+                    ->defaultImageUrl('https://ui-avatars.com/api/?name=V&color=7F9CF5&background=EBF4FF')
+                    ->circular(),
                 TextEntry::make('purpose')
-                    ->label('Purpose for Visit'),
+                    ->label('Purpose for Visit')
+                    ->default('-'),
                 TextEntry::make('status')
                     ->label('Type')
                     ->formatStateUsing(fn ($state) => $state ? ucfirst($state) : 'Walk-in'),

@@ -25,10 +25,6 @@ class Visit extends Model
         'status',
         'scheduled_time',
         'created_by',
-        'visitor',
-        'visitor_email',
-        'visitor_phone',
-        'visitor_company',
     ];
 
     protected $casts = [

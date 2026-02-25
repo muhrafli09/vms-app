@@ -34,6 +34,40 @@ class EditAppointment extends EditRecord
     {
         // Update visitor
         if ($this->record->visitor_id) {
+            // Check if phone is being changed to another visitor's phone
+            if ($data['visitor_phone'] !== $this->record->visitor->phone) {
+                $phoneExists = \App\Models\Visitor::where('phone', $data['visitor_phone'])
+                    ->where('id', '!=', $this->record->visitor_id)
+                    ->exists();
+                
+                if ($phoneExists) {
+                    \Filament\Notifications\Notification::make()
+                        ->danger()
+                        ->title('Phone number already exists')
+                        ->body('This phone number is already used by another visitor.')
+                        ->send();
+                    
+                    $this->halt();
+                }
+            }
+            
+            // Check if email is being changed and if it's already taken by another visitor
+            if (!empty($data['visitor_email']) && $data['visitor_email'] !== $this->record->visitor->email) {
+                $emailExists = \App\Models\Visitor::where('email', $data['visitor_email'])
+                    ->where('id', '!=', $this->record->visitor_id)
+                    ->exists();
+                
+                if ($emailExists) {
+                    \Filament\Notifications\Notification::make()
+                        ->danger()
+                        ->title('Email already exists')
+                        ->body('This email is already used by another visitor.')
+                        ->send();
+                    
+                    $this->halt();
+                }
+            }
+            
             $this->record->visitor->update([
                 'name' => $data['visitor_name'],
                 'phone' => $data['visitor_phone'],

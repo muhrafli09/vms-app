@@ -176,7 +176,7 @@ class KioskController extends Controller
         
         // Update visit with photo and check-in
         $visit->update([
-            'status' => 'completed',
+            'status' => 'checked_in',
             'arrival' => now(),
             'photo' => $photoPath,
         ]);

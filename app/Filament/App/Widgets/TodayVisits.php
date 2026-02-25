@@ -33,7 +33,10 @@ class TodayVisits extends BaseWidget
                 ->label(__('Visitor')),
             Tables\Columns\TextColumn::make('employee.full_name')
                 ->label(__('Host'))
-                ->description(fn (Visit $record): string => "{$record->employee->designation->name}, {$record->employee->department->name}"),
+                ->description(fn (Visit $record): string => 
+                    ($record->employee->designation ? $record->employee->designation->name : 'N/A') . ', ' . 
+                    ($record->employee->department ? $record->employee->department->name : 'N/A')
+                ),
             Tables\Columns\TextColumn::make('arrival')
                 ->label('Arrival')
                 ->formatStateUsing(function (Model $record) {

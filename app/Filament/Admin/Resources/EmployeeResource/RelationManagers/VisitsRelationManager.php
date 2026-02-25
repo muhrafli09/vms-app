@@ -30,12 +30,10 @@ class VisitsRelationManager extends RelationManager
             ->recordTitleAttribute('visitor')
             ->defaultSort('created_at', 'desc')
             ->columns([
-                Tables\Columns\TextColumn::make('visitor_name')
-                    ->label('Visitor')
-                    ->formatStateUsing(fn ($record) => $record->visitor_id && $record->visitor ? $record->visitor->name : ($record->visitor ?? '-')),
-                Tables\Columns\TextColumn::make('visitor_phone_col')
-                    ->label('Phone')
-                    ->formatStateUsing(fn ($record) => $record->visitor_id && $record->visitor ? $record->visitor->phone : ($record->visitor_phone ?? '-')),
+                Tables\Columns\TextColumn::make('visitor.name')
+                    ->label('Visitor'),
+                Tables\Columns\TextColumn::make('visitor.phone')
+                    ->label('Phone'),
                 Tables\Columns\ImageColumn::make('photo')
                     ->label('Photo')
                     ->circular()
@@ -45,9 +43,8 @@ class VisitsRelationManager extends RelationManager
                     ->colors([
                         'warning' => 'scheduled',
                         'success' => 'completed',
-                        'gray' => fn ($state) => $state === null || $state === 'checked_in',
-                    ])
-                    ->formatStateUsing(fn ($state) => $state ?? 'walk-in'),
+                        'gray' => 'checked_in',
+                    ]),
                 Tables\Columns\TextColumn::make('date')
                     ->label('Date')
                     ->state(function (Model $record) {
@@ -76,23 +73,24 @@ class VisitsRelationManager extends RelationManager
     {
         return $infolist
             ->schema([
-                TextEntry::make('visitor_name')
-                    ->label('Visitor Name')
-                    ->state(fn ($record) => $record->visitor_id && $record->visitor ? $record->visitor->name : ($record->visitor ?? '-')),
-                TextEntry::make('visitor_email')
-                    ->label('Email')
-                    ->state(fn ($record) => $record->visitor_id && $record->visitor ? $record->visitor->email : ($record->visitor_email ?? '-')),
-                TextEntry::make('visitor_phone')
-                    ->label('Phone Number')
-                    ->state(fn ($record) => $record->visitor_id && $record->visitor ? $record->visitor->phone : ($record->visitor_phone ?? '-')),
-                TextEntry::make('visitor_company')
-                    ->label('Company')
-                    ->state(fn ($record) => $record->visitor_id && $record->visitor ? $record->visitor->company : ($record->visitor_company ?? '-')),
+                TextEntry::make('visitor.name')
+                    ->label('Visitor Name'),
+                TextEntry::make('visitor.email')
+                    ->label('Email'),
+                TextEntry::make('visitor.phone')
+                    ->label('Phone Number'),
+                TextEntry::make('visitor.company')
+                    ->label('Company'),
                 TextEntry::make('purpose')
                     ->label('Purpose for Visit'),
                 TextEntry::make('status')
                     ->label('Type')
-                    ->formatStateUsing(fn ($state) => $state ? ucfirst($state) : 'Walk-in'),
+                    ->badge()
+                    ->color(fn ($state) => match($state) {
+                        'scheduled' => 'warning',
+                        'completed' => 'success',
+                        default => 'gray',
+                    }),
                 TextEntry::make('created_at')
                     ->dateTime(),
             ])
