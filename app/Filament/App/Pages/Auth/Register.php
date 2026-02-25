@@ -55,7 +55,11 @@ class Register extends BaseRegister
 
         $data = $this->form->getState();
 
-        $user = $this->getUserModel()::create($data);
+        $user = $this->getUserModel()::create([
+            'name' => $data['name'],
+            'email' => $data['email'],
+            'password' => $data['password'],
+        ]);
         
         // Auto-create employee record for new user
         \App\Models\Employee::create([
@@ -63,14 +67,12 @@ class Register extends BaseRegister
             'email' => $user->email,
             'first_name' => explode(' ', $user->name)[0],
             'last_name' => implode(' ', array_slice(explode(' ', $user->name), 1)) ?: null,
+            'department_id' => $data['department_id'] ?? null,
+            'designation_id' => $data['designation_id'] ?? null,
         ]);
 
         $this->invitation->delete();
 
-        app()->bind(
-            \Illuminate\Auth\Listeners\SendEmailVerificationNotification::class,
-            \Filament\Listeners\Auth\SendEmailVerificationNotification::class,
-        );
         event(new Registered($user));
 
         Filament::auth()->login($user);
@@ -88,6 +90,8 @@ class Register extends BaseRegister
                     ->schema([
                         $this->getNameFormComponent(),
                         $this->getEmailFormComponent(),
+                        $this->getDepartmentFormComponent(),
+                        $this->getDesignationFormComponent(),
                         $this->getPasswordFormComponent(),
                         $this->getPasswordConfirmationFormComponent(),
                     ])
@@ -105,5 +109,25 @@ class Register extends BaseRegister
             ->maxLength(255)
             ->unique($this->getUserModel())
             ->readOnly();
+    }
+    
+    protected function getDepartmentFormComponent(): Component
+    {
+        return Forms\Components\Select::make('department_id')
+            ->label('Department')
+            ->options(\App\Models\Department::pluck('name', 'id'))
+            ->searchable()
+            ->preload()
+            ->native(false);
+    }
+    
+    protected function getDesignationFormComponent(): Component
+    {
+        return Forms\Components\Select::make('designation_id')
+            ->label('Designation')
+            ->options(\App\Models\Designation::pluck('name', 'id'))
+            ->searchable()
+            ->preload()
+            ->native(false);
     }
 }

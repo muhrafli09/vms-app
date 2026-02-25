@@ -79,11 +79,39 @@ class UserResource extends Resource
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
+                Tables\Actions\DeleteAction::make()
+                    ->before(function (Tables\Actions\DeleteAction $action, User $record) {
+                        // Prevent deleting user if they have an employee record
+                        if ($record->employee) {
+                            \Filament\Notifications\Notification::make()
+                                ->danger()
+                                ->title('Cannot delete user')
+                                ->body('This user is assigned to an employee record. Please delete or reassign the employee first.')
+                                ->persistent()
+                                ->send();
+                            
+                            $action->cancel();
+                        }
+                    }),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+                    Tables\Actions\DeleteBulkAction::make()
+                        ->before(function (Tables\Actions\DeleteBulkAction $action, $records) {
+                            // Check if any user has employee record
+                            $usersWithEmployee = $records->filter(fn ($user) => $user->employee !== null);
+                            
+                            if ($usersWithEmployee->count() > 0) {
+                                \Filament\Notifications\Notification::make()
+                                    ->danger()
+                                    ->title('Cannot delete users')
+                                    ->body($usersWithEmployee->count() . ' user(s) are assigned to employee records. Please delete or reassign the employees first.')
+                                    ->persistent()
+                                    ->send();
+                                
+                                $action->cancel();
+                            }
+                        }),
                 ]),
             ]);
     }
