@@ -112,7 +112,8 @@ class TodayVisits extends BaseWidget
                                 ->preload(),
                             Forms\Components\ViewField::make('photo')
                                 ->label('Photo')
-                                ->view('forms.components.camera-field'),
+                                ->view('forms.components.camera-field')
+                                ->required(),
                             Forms\Components\Textarea::make('purpose')
                                 ->label('Purpose')
                                 ->rows(3)
@@ -120,6 +121,11 @@ class TodayVisits extends BaseWidget
                         ]),
                 ])
                 ->mutateFormDataUsing(function (array $data): array {
+                    // Validate photo is captured
+                    if (empty($data['photo'])) {
+                        throw new \Exception('Photo is required. Please capture visitor photo.');
+                    }
+                    
                     $visitor = \App\Models\Visitor::updateOrCreate(
                         ['phone' => $data['visitor_phone']],
                         [

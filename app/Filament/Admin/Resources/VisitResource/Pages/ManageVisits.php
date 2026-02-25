@@ -17,6 +17,11 @@ class ManageVisits extends ManageRecords
         return [
             Actions\CreateAction::make()
                 ->mutateFormDataUsing(function (array $data): array {
+                    // Validate photo is captured
+                    if (empty($data['photo'])) {
+                        throw new \Exception('Photo is required. Please capture visitor photo.');
+                    }
+                    
                     // Create or update visitor
                     $visitor = \App\Models\Visitor::updateOrCreate(
                         ['phone' => $data['visitor_phone']],

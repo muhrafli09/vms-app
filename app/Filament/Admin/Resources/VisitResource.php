@@ -96,7 +96,8 @@ class VisitResource extends Resource
                             ->preload(),
                         Forms\Components\ViewField::make('photo')
                             ->label('Photo')
-                            ->view('forms.components.camera-field'),
+                            ->view('forms.components.camera-field')
+                            ->required(),
                         Forms\Components\Textarea::make('purpose')
                             ->label('Purpose')
                             ->rows(3)

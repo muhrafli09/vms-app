@@ -43,6 +43,10 @@
         this.streaming = false;
     }
 }" class="space-y-2">
+    
+    <div class="text-sm text-red-600 font-medium mb-2">
+        * Photo is required - Please capture visitor photo
+    </div>
     <div class="relative">
         <video x-ref="video" x-show="streaming" class="w-full rounded-lg border" style="max-height: 300px;"></video>
         <img x-show="captured" :src="preview" class="w-full rounded-lg border" style="max-height: 300px;">
