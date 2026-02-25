@@ -94,6 +94,10 @@ class AppointmentResource extends Resource
                     ->label('Phone'),
                 Tables\Columns\TextColumn::make('employee.full_name')
                     ->label('Meeting with')
+                    ->description(fn (Visit $record): string => 
+                        ($record->employee->designation ? $record->employee->designation->name : 'No Designation') . ', ' . 
+                        ($record->employee->department ? $record->employee->department->name : 'No Department')
+                    )
                     ->searchable(),
                 Tables\Columns\TextColumn::make('scheduled_time')
                     ->label('Scheduled')

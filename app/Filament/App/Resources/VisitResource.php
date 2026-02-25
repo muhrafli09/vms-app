@@ -66,6 +66,10 @@ class VisitResource extends Resource
                     ->defaultImageUrl('https://ui-avatars.com/api/?name=V&color=7F9CF5&background=EBF4FF'),
                 Tables\Columns\TextColumn::make('employee.full_name')
                     ->label(__('Host'))
+                    ->description(fn (Visit $record): string => 
+                        ($record->employee->designation ? $record->employee->designation->name : 'No Designation') . ', ' . 
+                        ($record->employee->department ? $record->employee->department->name : 'No Department')
+                    )
                     ->searchable(),
                 Tables\Columns\TextColumn::make('date')
                     ->label('Date')
