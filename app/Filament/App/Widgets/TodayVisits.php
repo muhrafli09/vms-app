@@ -100,8 +100,12 @@ class TodayVisits extends BaseWidget
                             Forms\Components\Select::make('employee_id')
                                 ->label('Host')
                                 ->relationship('employee', 'first_name')
-                                ->getOptionLabelFromRecordUsing(fn ($record) => $record->full_name)
-                                ->searchable(['first_name', 'last_name'])
+                                ->getOptionLabelFromRecordUsing(fn ($record) => 
+                                    $record->full_name . ' - ' . 
+                                    ($record->designation ? $record->designation->name : 'No Designation') . ', ' . 
+                                    ($record->department ? $record->department->name : 'No Department')
+                                )
+                                ->searchable(['first_name', 'last_name', 'email'])
                                 ->required()
                                 ->preload(),
                             Forms\Components\ViewField::make('photo')
