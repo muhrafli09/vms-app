@@ -81,6 +81,11 @@ class Register extends BaseRegister
 
         return app(RegistrationResponse::class);
     }
+    
+    protected function getRedirectUrl(): string
+    {
+        return Filament::getUrl();
+    }
 
     protected function getForms(): array
     {
